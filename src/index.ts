@@ -41,10 +41,7 @@ export const createAxios = (options: SacoAxiosCreateOptions) => {
         instance.interceptors.request.use(async (config: SacoAxiosRequestConfig) => {
             // 内部优化拦截：正在刷新令牌时排队，拿到新 token 再发出（刷新接口本身不能等，否则死锁）
             if (!dualToken.isRefreshRequest(config.url)) {
-                const access = await dualToken.waitIfRefreshing()
-                if (access) {
-                    dualToken.setAccessToken(config, access)
-                }
+                await dualToken.waitIfRefreshing()
             }
             return config
         })
@@ -70,12 +67,10 @@ export const createAxios = (options: SacoAxiosCreateOptions) => {
                 }
                 try {
                     // 等待刷新令牌
-                    const access = await dualToken.refresh()
+                    await dualToken.refresh()
                     // 设置重试标识
                     config[RETRY_FLAG] = true
-                    // 设置访问令牌
-                    dualToken.setAccessToken(config, access)
-                    // 重新请求
+                    // 重新请求（新 token 由业务 requestHandler 挂上）
                     return instance.request(config)
                 } catch (refreshError) {
                     // 如果刷新令牌失败，则直接返回错误

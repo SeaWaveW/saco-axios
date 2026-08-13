@@ -31,12 +31,12 @@ export type SacoAxiosDualTokenOptions = SacoAxiosBaseOptions & {
     refreshToken: string
     /** 刷新令牌接口地址 */
     refreshTokenApi: string
-    /** 刷新令牌接口处理函数 */
+    /** 刷新令牌接口处理函数：用 instance 发刷新请求；token 在 data 里则业务按字段名写入存储，后端 Set-Cookie 则可直接 return instance.post(...) */
     refreshTokenHandler: (
         instance: SacoAxiosInstance,
         refreshToken: string,
         accessToken: string
-    ) => Promise<string>
+    ) => Promise<unknown>
 }
 
 /** 拓展response类型 */
