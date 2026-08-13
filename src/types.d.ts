@@ -11,6 +11,12 @@ export type SacoAxiosCreateOptions = SacoAxiosBaseOptions | SacoAxiosDualTokenOp
 export type SacoAxiosBaseOptions = CreateAxiosDefaults & {
     /** 响应code映射函数(可选) */
     codeMaps?: SacoAxiosCodeMaps
+    /** 请求拦截处理函数 */
+    requestHandler?: SacoAxiosRequestHandler
+    /** 成功统一处理函数 */
+    successHandler?: SacoAxiosSuccessHandler
+    /** 失败统一处理函数 */
+    errorHandler?: SacoAxiosErrorHandler
 }
 
 /** 双token验证配置 */
@@ -36,9 +42,35 @@ export type SacoAxiosInstance = AxiosInstance & {
     downloadFile: () => void
 }
 
-/** 响应code处理函数 */
-export type SacoAxiosCodeHandler = (response: SacoAxiosResponse) => Promise<boolean>
+/** 响应成功处理函数 */
+export type SacoAxiosSuccessHandler = (
+    response: SacoAxiosResponse,
+    resolve: (...args: any[]) => void,
+    reject: (...args: any[]) => void
+) => void
+
+/** 响应失败处理函数 */
+export type SacoAxiosErrorHandler = (error: AxiosError) => any
+
 /** 响应code映射函数处理类型 */
 export type SacoAxiosCodeMaps = {
-    [key: number]: SacoAxiosCodeHandler
+    [key: number]: SacoAxiosSuccessHandler
+}
+
+/** 请求拦截配置类型 */
+export type SacoAxiosRequestConfig = InternalAxiosRequestConfig & {
+    [RETRY_FLAG]?: boolean
+}
+
+/** 请求拦截处理函数 */
+export type SacoAxiosRequestHandler = (config: SacoAxiosRequestConfig) => SacoAxiosRequestConfig
+
+/** 拦截错误类型 */
+export type SacoAxiosRequestError = AxiosError & {
+    config: SacoAxiosRequestConfig
+}
+
+/** 响应错误类型 */
+export type SacoAxiosResponseError = AxiosError & {
+    config: SacoAxiosRequestConfig
 }
