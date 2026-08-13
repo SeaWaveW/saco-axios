@@ -1,7 +1,9 @@
-import type  { 
+import type {
     CreateAxiosDefaults,
     AxiosResponse,
-    AxiosInstance
+    AxiosInstance,
+    AxiosError,
+    InternalAxiosRequestConfig
 } from 'axios'
 
 /** 创建axios实例配置 */
@@ -30,7 +32,11 @@ export type SacoAxiosDualTokenOptions = SacoAxiosBaseOptions & {
     /** 刷新令牌接口地址 */
     refreshTokenApi: string
     /** 刷新令牌接口处理函数 */
-    refreshTokenHandler: (refreshToken: string) => Promise<string>
+    refreshTokenHandler: (
+        instance: SacoAxiosInstance,
+        refreshToken: string,
+        accessToken: string
+    ) => Promise<string>
 }
 
 /** 拓展response类型 */
@@ -59,7 +65,7 @@ export type SacoAxiosCodeMaps = {
 
 /** 请求拦截配置类型 */
 export type SacoAxiosRequestConfig = InternalAxiosRequestConfig & {
-    [RETRY_FLAG]?: boolean
+    _sacoRetry?: boolean
 }
 
 /** 请求拦截处理函数 */

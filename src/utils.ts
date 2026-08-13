@@ -1,4 +1,4 @@
-import type { SacoAxiosCreateOptions, SacoAxiosDualTokenOptions, SacoAxiosInstance } from './types'
+import type { SacoAxiosCreateOptions, SacoAxiosDualTokenOptions, SacoAxiosInstance, SacoAxiosRequestConfig } from './types'
 
 /** 重试标识 */
 export const RETRY_FLAG = '_sacoRetry'
@@ -13,12 +13,22 @@ export const isDualTokenOptions = (
     return 'dualMode' in options && options.dualMode === true
 }
 
+/** 写入 access token 到请求头 */
+const applyAccessToken = (config: SacoAxiosRequestConfig, field: string, token: string) => {
+    if (typeof config.headers?.set === 'function') {
+        config.headers.set(field, token)
+    } else {
+        ;(config.headers as Record<string, string>)[field] = token
+    }
+}
+
 /**
  * 双 token：并发过期时共用同一次刷新 Promise，后来的请求排队等同一个结果。
  * 返回 `refresh()`，每次调用拿到当前进行中（或新开）的刷新 Promise。
+ * 已在途的 401 走 refresh 后重试；尚未发出的请求在 request 拦截里 waitIfRefreshing。
  */
 export const useDualToken = (options: SacoAxiosDualTokenOptions, instance: SacoAxiosInstance) => {
-    const { refreshToken, refreshTokenApi, refreshTokenHandler } = options
+    const { accessToken, refreshToken, refreshTokenApi, refreshTokenHandler } = options
 
     let refreshPromise: Promise<string> | null = null
 
@@ -26,7 +36,7 @@ export const useDualToken = (options: SacoAxiosDualTokenOptions, instance: SacoA
     const refresh = (): Promise<string> => {
         if (!refreshPromise) {
             refreshPromise = Promise.resolve()
-                .then(() => refreshTokenHandler(refreshToken))
+                .then(() => refreshTokenHandler(instance, refreshToken, accessToken))
                 .finally(() => {
                     refreshPromise = null
                 })
@@ -34,10 +44,30 @@ export const useDualToken = (options: SacoAxiosDualTokenOptions, instance: SacoA
         return refreshPromise
     }
 
+    /**
+     * 正在刷新则排队等新 access token；否则立刻 null。
+     * 刷新接口自己不能调这个，否则会死锁。
+     */
+    const waitIfRefreshing = (): Promise<string | null> => {
+        return refreshPromise ?? Promise.resolve(null)
+    }
+
+    /** 是否为刷新令牌接口本身 */
     const isRefreshRequest = (url?: string) => {
         if (!url) return false
         return url.includes(refreshTokenApi)
     }
 
-    return { refresh, isRefreshRequest, accessToken: options.accessToken }
+    /** 设置访问令牌 */
+    const setAccessToken = (config: SacoAxiosRequestConfig, token: string) => {
+        applyAccessToken(config, accessToken, token)
+    }
+
+    return {
+        refresh,
+        waitIfRefreshing,
+        isRefreshRequest,
+        setAccessToken,
+        accessToken,
+    }
 }
