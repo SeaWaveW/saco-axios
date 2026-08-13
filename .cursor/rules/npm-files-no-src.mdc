@@ -1,0 +1,29 @@
+---
+description: npm package.json files 字段禁止包含源码
+globs: package.json
+alwaysApply: true
+---
+
+# npm `files` 不得包含源码
+
+发布到 npm 时，`package.json` 的 `files` **只能包含构建产物与必要文档**，禁止打进源码目录。
+
+## 允许
+
+- `es` / `lib` / `dist` 等构建输出
+- `README.md`、`LICENSE` 等文档
+
+## 禁止
+
+- `src`
+- 测试、配置源文件、示例源码等未构建内容
+
+```json
+// ✅ GOOD
+"files": ["es", "lib", "README.md"]
+
+// ❌ BAD
+"files": ["es", "lib", "src", "README.md"]
+```
+
+类型声明走构建生成的 `*.d.ts`（如 `es/*.d.ts`），不要靠打包 `src` 提供类型。

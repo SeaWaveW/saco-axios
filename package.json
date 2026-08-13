@@ -1,21 +1,58 @@
 {
   "name": "@saco/axios",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "description": "Axios wrapper for saco",
+  "author": "seawavew",
+  "license": "MIT",
+  "type": "module",
+  "homepage": "https://github.com/SeaWaveW/saco-axios#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SeaWaveW/saco-axios.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/SeaWaveW/saco-axios/issues"
   },
-  "homepage": "https://github.com/SeaWaveW/saco-axios#readme"
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "saco",
+    "axios",
+    "http",
+    "request"
+  ],
+  "main": "./lib/index.cjs",
+  "module": "./es/index.mjs",
+  "types": "./es/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./es/index.d.ts",
+      "import": "./es/index.mjs",
+      "require": "./lib/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "es",
+    "lib",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "peerDependencies": {
+    "axios": ">=1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.2",
+    "axios": "^1.19.0",
+    "typescript": "~5.9.3",
+    "vite": "^6.3.5",
+    "vite-plugin-dts": "^4.5.4"
+  },
+  "scripts": {
+    "build": "vite build",
+    "build:check": "tsc --noEmit -p tsconfig.json",
+    "dev": "vite build --watch",
+    "prepublishOnly": "pnpm run build"
+  }
 }
