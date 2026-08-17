@@ -1,6 +1,7 @@
 import axios, { isCancel } from 'axios'
 import type {
     SacoAxiosCreateOptions,
+    SacoAxiosDualTokenTimeOptions,
     SacoAxiosInstance,
     SacoAxiosRequestConfig,
     SacoAxiosRequestError,
@@ -10,17 +11,33 @@ import {
     RETRY_FLAG,
     EXPIRED_CODE,
     isDualTokenOptions,
-    useDualToken,
+    needsAuth,
 } from './utils'
+import { useDualToken } from './token'
 
 /** 创建axios实例 */
 export const createAxios = (options: SacoAxiosCreateOptions) => {
     /** 创建实例 */
     const instance = axios.create(options) as SacoAxiosInstance
+    const timeOptions = options as SacoAxiosDualTokenTimeOptions
     /** 双 token：并发 401 共用一次 refresh Promise */
     const dualToken = isDualTokenOptions(options)
         ? useDualToken(options, instance)
         : null
+    /**
+     * 写入令牌失效时间（毫秒），并按 tokenStorage 缓存，刷新页面后仍能读回。
+     * validTime：后端返回的失效时间戳；leadTime：提前检查阈值，不传则沿用创建时配置。
+     */
+    instance.setExpiresTime = (validTime: number, leadTime?: number) => {
+        timeOptions.expiresTime = validTime
+        if (typeof leadTime === 'number') {
+            timeOptions.checkTokenTime = leadTime
+        }
+        dualToken?.persistExpiresTime(validTime)
+    }
+    if (dualToken?.tokenStorage === 'cookie') {
+        instance.defaults.withCredentials = true
+    }
     /** 请求拦截 */
     instance.interceptors.request.use((config: SacoAxiosRequestConfig) => {
         // 请求拦截处理
@@ -40,8 +57,14 @@ export const createAxios = (options: SacoAxiosCreateOptions) => {
         // 后注册请求拦截（先执行）
         instance.interceptors.request.use(async (config: SacoAxiosRequestConfig) => {
             // 内部优化拦截：正在刷新令牌时排队，拿到新 token 再发出（刷新接口本身不能等，否则死锁）
-            if (!dualToken.isRefreshRequest(config.url)) {
+            if (!dualToken.isRefreshRequest(config.url) && needsAuth(config)) {
+                // 每次请求用当前毫秒时间戳判断是否提前刷新
+                if (dualToken.shouldRefreshByTime()) {
+                    await dualToken.refresh()
+                }
                 await dualToken.waitIfRefreshing()
+                // 刷新完成后从 cookie / localStorage 读取最新 access 令牌
+                dualToken.applyAccessToken(config)
             }
             return config
         })
@@ -61,8 +84,12 @@ export const createAxios = (options: SacoAxiosCreateOptions) => {
                 if (status !== EXPIRED_CODE || !config) {
                     return Promise.reject(error)
                 }
-                // 刷新接口本身失败，或已经重试过仍 401，不再递归刷新
-                if (dualToken.isRefreshRequest(config.url) || config[RETRY_FLAG]) {
+                // 刷新接口本身失败、已重试过，或不需要令牌的请求（登录/注册等），不再走刷新
+                if (
+                    dualToken.isRefreshRequest(config.url) ||
+                    config[RETRY_FLAG] ||
+                    !needsAuth(config)
+                ) {
                     return Promise.reject(error)
                 }
                 try {
@@ -70,7 +97,7 @@ export const createAxios = (options: SacoAxiosCreateOptions) => {
                     await dualToken.refresh()
                     // 设置重试标识
                     config[RETRY_FLAG] = true
-                    // 重新请求（新 token 由业务 requestHandler 挂上）
+                    // 重新请求（新 token 由请求拦截从存储读取并挂上）
                     return instance.request(config)
                 } catch (refreshError) {
                     // 如果刷新令牌失败，则直接返回错误

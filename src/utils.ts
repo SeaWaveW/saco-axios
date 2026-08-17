@@ -1,4 +1,7 @@
-import type { SacoAxiosCreateOptions, SacoAxiosDualTokenOptions, SacoAxiosInstance } from './types'
+import type {
+    SacoAxiosCreateOptions,
+    SacoAxiosDualTokenOptions,
+} from './types'
 
 /** 重试标识 */
 export const RETRY_FLAG = '_sacoRetry'
@@ -13,45 +16,47 @@ export const isDualTokenOptions = (
     return 'dualMode' in options && options.dualMode === true
 }
 
-/**
- * 双 token：并发过期时共用同一次刷新 Promise，后来的请求排队等同一个结果。
- * 返回 `refresh()`，每次调用拿到当前进行中（或新开）的刷新 Promise。
- * 已在途的 401 走 refresh 后重试；尚未发出的请求在 request 拦截里 waitIfRefreshing。
- */
-export const useDualToken = (options: SacoAxiosDualTokenOptions, instance: SacoAxiosInstance) => {
-    const { accessToken, refreshToken, refreshTokenApi, refreshTokenHandler } = options
+/** 从 document.cookie 读取指定 name 的值（读不到 HttpOnly，也读不到 Cookie 的 Expires） */
+const readCookie = (name: string): string => {
+    if (typeof document === 'undefined') return ''
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const match = document.cookie.match(new RegExp(`(?:^|; )${escaped}=([^;]*)`))
+    return match ? decodeURIComponent(match[1]) : ''
+}
 
-    let refreshPromise: Promise<unknown> | null = null
-
-    /** 单飞刷新：已有进行中的 Promise 则直接返回，刷新结束后清空以便下次再刷 */
-    const refresh = (): Promise<unknown> => {
-        if (!refreshPromise) {
-            refreshPromise = Promise.resolve()
-                .then(() => refreshTokenHandler(instance, refreshToken, accessToken))
-                .finally(() => {
-                    refreshPromise = null
-                })
-        }
-        return refreshPromise
+/** 按 tokenStorage 读取指定字段名的值 */
+export const readStoredValue = (storage: SacoAxiosDualTokenOptions['tokenStorage'], key: string): string => {
+    if (!storage || typeof window === 'undefined') return ''
+    if (storage === 'localStorage') {
+        return window.localStorage.getItem(key) ?? ''
     }
-
-    /**
-     * 正在刷新则排队等刷新完成；否则立刻放行。
-     * 刷新接口自己不能调这个，否则会死锁。
-     */
-    const waitIfRefreshing = (): Promise<unknown> => {
-        return refreshPromise ?? Promise.resolve()
+    if (storage === 'cookie') {
+        return readCookie(key)
     }
+    return ''
+}
 
-    /** 是否为刷新令牌接口本身 */
-    const isRefreshRequest = (url?: string) => {
-        if (!url) return false
-        return url.includes(refreshTokenApi)
+/** 按 tokenStorage 写入指定字段（过期时间戳等） */
+export const writeStoredValue = (
+    storage: SacoAxiosDualTokenOptions['tokenStorage'],
+    key: string,
+    value: string,
+) => {
+    if (!storage || typeof window === 'undefined') return
+    if (storage === 'localStorage') {
+        window.localStorage.setItem(key, value)
+        return
     }
-
-    return {
-        refresh,
-        waitIfRefreshing,
-        isRefreshRequest,
+    if (storage === 'cookie' && typeof document !== 'undefined') {
+        document.cookie = `${key}=${encodeURIComponent(value)}; path=/; max-age=31536000`
     }
 }
+
+/** 失效时间戳的存储 key：`{accessToken}_expiresTime` */
+export const expiresTimeStorageKey = (accessToken: string) => `${accessToken}_expiresTime`
+
+/** 按 tokenStorage 读取指定字段名的令牌 */
+export const readStoredToken = readStoredValue
+
+/** 是否需要令牌。不传 requireAuth 视为 true */
+export const needsAuth = (config: { requireAuth?: boolean }) => config.requireAuth !== false
