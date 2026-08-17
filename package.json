@@ -1,6 +1,6 @@
 {
   "name": "@saco/axios",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Axios wrapper for saco",
   "author": "seawavew",
   "license": "MIT",

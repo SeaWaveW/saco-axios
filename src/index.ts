@@ -11,7 +11,7 @@ import {
     RETRY_FLAG,
     EXPIRED_CODE,
     isDualTokenOptions,
-    needsAuth,
+    isNoAuth,
 } from './utils'
 import { useDualToken } from './token'
 
@@ -57,9 +57,9 @@ export const createAxios = (options: SacoAxiosCreateOptions) => {
         // 后注册请求拦截（先执行）
         instance.interceptors.request.use(async (config: SacoAxiosRequestConfig) => {
             // 内部优化拦截：正在刷新令牌时排队，拿到新 token 再发出（刷新接口本身不能等，否则死锁）
-            if (!dualToken.isRefreshRequest(config.url) && needsAuth(config)) {
+            if (!dualToken.isRefreshRequest(config.url) && !isNoAuth(config)) {
                 // 每次请求用当前毫秒时间戳判断是否提前刷新
-                if (dualToken.shouldRefreshByTime()) {
+                if (dualToken.shouldRefreshByTime() && !dualToken.isTokenEmpty()) {
                     await dualToken.refresh()
                 }
                 await dualToken.waitIfRefreshing()
@@ -84,12 +84,17 @@ export const createAxios = (options: SacoAxiosCreateOptions) => {
                 if (status !== EXPIRED_CODE || !config) {
                     return Promise.reject(error)
                 }
-                // 刷新接口本身失败、已重试过，或不需要令牌的请求（登录/注册等），不再走刷新
+                // 刷新接口本身失败、已重试过、公开接口，不再走刷新
                 if (
                     dualToken.isRefreshRequest(config.url) ||
                     config[RETRY_FLAG] ||
-                    !needsAuth(config)
+                    isNoAuth(config)
                 ) {
+                    return Promise.reject(error)
+                }
+                // 存储里没有令牌：未登录，不刷新，带上 isEmpty 给 errorHandler
+                if (dualToken.isTokenEmpty()) {
+                    config.isEmpty = true
                     return Promise.reject(error)
                 }
                 try {

@@ -58,5 +58,5 @@ export const expiresTimeStorageKey = (accessToken: string) => `${accessToken}_ex
 /** 按 tokenStorage 读取指定字段名的令牌 */
 export const readStoredToken = readStoredValue
 
-/** 是否需要令牌。不传 requireAuth 视为 true */
-export const needsAuth = (config: { requireAuth?: boolean }) => config.requireAuth !== false
+/** 公开接口：传了 noAuth: true。不传视为需要令牌 */
+export const isNoAuth = (config: { noAuth?: boolean }) => config.noAuth === true

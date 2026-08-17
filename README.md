@@ -103,20 +103,20 @@ export const getUser = () => http.get('/user/info')
 会写入内存，并按 `tokenStorage` 缓存（默认 localStorage，key 为 `expires`，缺省 `{accessToken}_expiresTime`）。刷新页面后 `createAxios` 会读回，每次请求也从存储读取。登录成功、刷新成功后都要调用。JWT 的 `exp` 若是秒，业务侧先 `* 1000` 再传入。退出登录时记得删掉这个 key。
 
 
-### 单次请求：`requireAuth`
+### 单次请求：`noAuth`
 
 | 字段 | 默认 | 说明 |
 | --- | --- | --- |
-| `requireAuth` | `true` | `false`：不挂令牌、不按时间刷新、401 也不走双 token 刷新，请求原样发出 |
+| `noAuth` | `false` | `true`：公开接口，不挂令牌、不按时间刷新、401 也不走双 token 刷新 |
 
-登录、注册、验证码等接口应传 `requireAuth: false`。后端通常不校验令牌，但密码错误仍可能返回 401，库会把它当成令牌过期去刷新。
+登录、注册、验证码等由**业务自己标** `noAuth: true`（各项目路径不同，库不猜测）。不传则需要令牌。
 
 字段不叫 `auth`：axios 已用 `auth` 表示 HTTP Basic（`username` / `password`）。
 
 
 ```ts
-http.post('/login', data, { requireAuth: false })
-http.post('/register', data, { requireAuth: false })
+http.post('/login', data, { noAuth: true })
+http.post('/register', data, { noAuth: true })
 ```
 
 
@@ -127,6 +127,12 @@ export const accessTokenKey = 'accessToken'
 export const refreshTokenKey = 'refreshToken'
 export const expiresTimeKey = `${accessTokenKey}_expiresTime`
 export const refreshUrl = '/auth/refresh'
+
+const clearAuthStorage = () => {
+  localStorage.removeItem(accessTokenKey)
+  localStorage.removeItem(refreshTokenKey)
+  localStorage.removeItem(expiresTimeKey)
+}
 
 export const http = createAxios({
   baseURL: '/api',
@@ -147,10 +153,12 @@ export const http = createAxios({
     http.setExpiresTime(data.expireAt) // 写入 expires 对应的存储 key
   },
   errorHandler(error) {
+    if (error.config?.isEmpty) {
+      // 未登录（存储里没有令牌），不要当刷新失败
+      return error
+    }
     if (error.config?.url?.includes(refreshUrl)) {
-      localStorage.removeItem(accessTokenKey)
-      localStorage.removeItem(refreshTokenKey)
-      localStorage.removeItem(expiresTimeKey)
+      clearAuthStorage()
       window.location.href = '/login'
     }
     return error
@@ -158,10 +166,17 @@ export const http = createAxios({
 })
 
 export const login = (data: LoginParams) => {
-  return http.post('/login', data, { requireAuth: false }).then((res) => {
+  return http.post('/login', data, { noAuth: true }).then((res) => {
     localStorage.setItem(accessTokenKey, res.accessToken)
     localStorage.setItem(refreshTokenKey, res.refreshToken)
     http.setExpiresTime(res.expireAt, 60 * 1000)
+    return res
+  })
+}
+
+export const logout = () => {
+  return http.post('/logout').then((res) => {
+    clearAuthStorage()
     return res
   })
 }
@@ -177,10 +192,11 @@ export const getUser = () => http.get('/user/info')
 - 每次请求从 `tokenStorage` 读取当前 `expiresTime`（毫秒时间戳）：`Date.now() + checkTokenTime >= expiresTime` 则主动刷新。未 `setExpiresTime` 或非正数则跳过。`setExpiresTime` 会缓存，刷新页面后自动读回
 - 默认从 `localStorage` 读取 access 挂到请求头（`tokenStorage: 'cookie'` 时改走 Cookie）。头名为 `accessToken` 字段名；若为 `Authorization` 且值未带 `Bearer` 会自动补上。存储里没值则不挂头
 - 刷新接口本身不排队、不递归刷新、不挂 access
-- `requireAuth: false`：不挂令牌、不排队、不刷新，401 原样抛给 `errorHandler`
+- `noAuth: true`：公开接口，不挂令牌、不排队、不刷新，401 原样抛给 `errorHandler`（由业务自己标）
+- localStorage 下 access / refresh 都空时的 401：不刷新，`error.config.isEmpty = true`，供 `errorHandler` 区分未登录。Cookie 模式读不到则不标
 - 刷新失败：`reject` 给 `errorHandler`，该请求不会再发出 / 重试
 
-登录跳转放 `errorHandler`，用 `refreshUrl` 判断是否刷新接口失败；不要放进 `refreshTokenHandler`。`errorHandler` 还会接到其它失败（500、断网、取消、登录 401），不要一律跳登录。
+登录跳转放 `errorHandler`：先看 `isEmpty`（未登录），再看是否刷新接口失败；不要放进 `refreshTokenHandler`。`errorHandler` 还会接到其它失败（500、断网、取消、登录 401），不要一律跳登录。
 
 
 ## License

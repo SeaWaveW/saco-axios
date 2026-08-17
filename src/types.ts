@@ -105,21 +105,28 @@ export type SacoAxiosCodeMaps = {
 export type SacoAxiosRequestConfig = InternalAxiosRequestConfig & {
     _sacoRetry?: boolean
     /**
-     * 是否需要令牌。不传视为 true。
-     * false：不挂令牌、不按时间刷新、401 也不走双 token 刷新，请求原样发出。
-     * 登录 / 注册 / 验证码等接口应传 false。
+     * 公开接口：不挂令牌、不按时间刷新、401 也不走双 token 刷新，请求原样发出。
+     * 不传视为 false（需要令牌）。登录 / 注册 / 验证码等由业务自行标 true。
      * 不叫 auth：axios 已用 auth 表示 HTTP Basic（username / password）。
      */
-    requireAuth?: boolean
+    noAuth?: boolean
+    /**
+     * 库写入：localStorage 下 access / refresh 都为空时的 401，未走刷新。
+     * 供 errorHandler 区分「未登录」和「刷新失败」。Cookie / HttpOnly 读不到则不会标。
+     */
+    isEmpty?: boolean
 }
 
 declare module 'axios' {
     interface AxiosRequestConfig {
         /**
-         * 是否需要令牌。不传视为 true。
-         * false：不挂令牌、不按时间刷新、401 也不走双 token 刷新，请求原样发出。
+         * 公开接口。不传视为 false（需要令牌）。true：不挂令牌、不刷新。
          */
-        requireAuth?: boolean
+        noAuth?: boolean
+        /**
+         * 库写入：存储中无令牌时的 401，未走刷新。
+         */
+        isEmpty?: boolean
         _sacoRetry?: boolean
     }
 }

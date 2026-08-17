@@ -94,6 +94,17 @@ export const useDualToken = (options: SacoAxiosDualTokenOptions, instance: SacoA
         return url.includes(refreshTokenApi)
     }
 
+    /**
+     * localStorage 下 access、refresh 都没有则视为未登录。
+     * cookie 读不到 HttpOnly，不能据此判断，返回 false 表示「不按空令牌拦截」。
+     */
+    const isTokenEmpty = (): boolean => {
+        if (tokenStorage !== 'localStorage') return false
+        const access = readStoredToken(tokenStorage, accessToken)
+        const refresh = readStoredToken(tokenStorage, refreshToken)
+        return !access && !refresh
+    }
+
     return {
         refresh,
         waitIfRefreshing,
@@ -101,6 +112,7 @@ export const useDualToken = (options: SacoAxiosDualTokenOptions, instance: SacoA
         applyAccessToken,
         persistExpiresTime,
         isRefreshRequest,
+        isTokenEmpty,
         tokenStorage,
     }
 }
