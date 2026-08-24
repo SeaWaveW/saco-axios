@@ -15,8 +15,13 @@ import {
 } from './utils'
 import { useDualToken } from './token'
 
+export type {
+    SacoAxiosCreateOptions,
+    SacoAxiosInstance,
+} from './types'
+
 /** 创建axios实例 */
-export const createAxios = (options: SacoAxiosCreateOptions) => {
+export const createAxios = (options: SacoAxiosCreateOptions): SacoAxiosInstance => {
     /** 创建实例 */
     const instance = axios.create(options) as SacoAxiosInstance
     const timeOptions = options as SacoAxiosDualTokenTimeOptions
