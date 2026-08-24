@@ -1,0 +1,18 @@
+---
+description: 写代码必须对照本仓库 Prettier / ESLint / Stylelint；缩进用 Tab
+alwaysApply: true
+---
+
+# 格式与 Lint
+
+写或改代码前先读**本仓库**根目录配置，按里面的规则来，不要另起一套风格：
+
+- Prettier：`.prettierrc.json` / `prettier.config.*` / `package.json` 的 `prettier`
+- ESLint：`eslint.config.*` / `.eslintrc*`
+- Stylelint：`stylelint.config.*` / `.stylelintrc*`
+
+配置里没有的条目就当没这条，不要用「业界默认」补上。格式和 ESLint 冲突时 **Prettier 优先**；ESLint 若已 skip-formatting，不要再写 indent 类规则去抢。
+
+## 缩进
+
+一级缩进 **一个 Tab**（`useTabs: true`），不要用 2 空格。嵌套一层多一个 Tab，折叠时层级更直观。
