@@ -1,4 +1,30 @@
-import axios, { isCancel } from 'axios'
+import axios, {
+    isCancel,
+    isAxiosError,
+    CanceledError,
+    AxiosError,
+    AxiosHeaders,
+    HttpStatusCode,
+    all,
+    spread,
+    toFormData,
+    formToJSON,
+    mergeConfig,
+} from 'axios'
+
+export {
+    isCancel,
+    isAxiosError,
+    CanceledError,
+    AxiosError,
+    AxiosHeaders,
+    HttpStatusCode,
+    all,
+    spread,
+    toFormData,
+    formToJSON,
+    mergeConfig,
+}
 import type {
     SacoAxiosCreateOptions,
     SacoAxiosDualTokenTimeOptions,

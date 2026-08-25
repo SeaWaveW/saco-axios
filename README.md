@@ -56,6 +56,18 @@ export const http = createAxios({
 export const getUser = () => http.get('/user/info')
 ```
 
+从 axios 转出的辅助方法也可直接从本包引用，不必再装一份 `axios`：
+
+```ts
+import { createAxios, isCancel, isAxiosError, CanceledError } from '@saco/axios'
+
+http.get('/user').catch((error) => {
+  if (isCancel(error)) return
+})
+```
+
+`isCancel`、`isAxiosError`、`CanceledError`、`AxiosError`、`AxiosHeaders`、`HttpStatusCode`、`all`、`spread`、`toFormData`、`formToJSON`、`mergeConfig` 均已导出。
+
 
 ## 双 token
 
