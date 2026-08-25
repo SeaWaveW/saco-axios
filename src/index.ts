@@ -1,30 +1,17 @@
-import axios, {
-    isCancel,
-    isAxiosError,
-    CanceledError,
-    AxiosError,
-    AxiosHeaders,
-    HttpStatusCode,
-    all,
-    spread,
-    toFormData,
-    formToJSON,
-    mergeConfig,
-} from 'axios'
+import axios from 'axios'
 
-export {
-    isCancel,
-    isAxiosError,
-    CanceledError,
-    AxiosError,
-    AxiosHeaders,
-    HttpStatusCode,
-    all,
-    spread,
-    toFormData,
-    formToJSON,
-    mergeConfig,
-}
+/** 本包自己的具名导出：axios CJS 声明是 export =，没有 isCancel 具名成员 */
+export const isCancel = (value: unknown): boolean => axios.isCancel(value)
+export const isAxiosError = (payload: unknown): boolean => axios.isAxiosError(payload)
+export const CanceledError = axios.CanceledError
+export const AxiosError = axios.AxiosError
+export const AxiosHeaders = axios.AxiosHeaders
+export const HttpStatusCode = axios.HttpStatusCode
+export const all = axios.all.bind(axios)
+export const spread = axios.spread.bind(axios)
+export const toFormData = axios.toFormData.bind(axios)
+export const formToJSON = axios.formToJSON.bind(axios)
+export const mergeConfig = axios.mergeConfig.bind(axios)
 import type {
     SacoAxiosCreateOptions,
     SacoAxiosDualTokenTimeOptions,
