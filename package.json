@@ -1,6 +1,6 @@
 {
   "name": "@saco/axios",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Axios wrapper for saco",
   "author": "seawavew",
   "license": "MIT",
@@ -14,7 +14,8 @@
     "url": "https://github.com/SeaWaveW/saco-axios/issues"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "keywords": [
     "saco",
